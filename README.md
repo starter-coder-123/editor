@@ -7,7 +7,7 @@
 <p align="center">The professional video editor built for agents</p>
 
 <p align="center">
-  <a href="https://github.com/diffusionstudio/editor/releases/latest/download/Diffusion-Studio-arm64.dmg"><img src="https://img.shields.io/badge/Download-macOS%20Apple%20Silicon-161616?style=flat&logo=apple&logoColor=F8F8F8&labelColor=000000" alt="Download for macOS (Apple Silicon)" /></a>
+  <a href="https://www.diffusion.studio/download"><img src="https://img.shields.io/badge/Download-macOS%20Apple%20Silicon-161616?style=flat&logo=apple&logoColor=F8F8F8&labelColor=000000" alt="Download for macOS (Apple Silicon)" /></a>
   <a href="https://discord.com/invite/zPQJrNGuFB"><img src="https://img.shields.io/discord/1115673443141156924?style=flat&logo=discord&logoColor=F8F8F8&label=Discord&labelColor=000000&color=161616" alt="Discord" /></a>
   <a href="https://x.com/diffusionhq"><img src="https://img.shields.io/badge/Follow%20for-Updates-161616?style=flat&logo=x&logoColor=F8F8F8&labelColor=000000" alt="Follow on X" /></a>
   <a href="https://www.ycombinator.com/companies/diffusion-studio"><img src="https://img.shields.io/badge/Combinator-F24-161616?style=flat&logo=ycombinator&logoColor=F8F8F8&labelColor=000000" alt="Y Combinator F24" /></a>
@@ -27,31 +27,47 @@
 
 <br />
 
-## Why Diffusion Studio
+## Diffusion Studio
 
-Diffusion Studio is an open-source video editor that uses [SolidJS](https://www.solidjs.com) modules as the document source. Think IDE, but it renders a video canvas instead of text.
+Edit videos with Codex, Claude Code, OpenCode, or Pi. Refine any output in a fully featured editing environment.
 
-This goes both ways: edit on the canvas and the change lands in the code; edit the code and the canvas redraws.
+Every edit you make is written to real code, so the agent always sees the latest version. A headless mode is available too.
 
-The desktop app comes with a command line that lets agents watch and listen to your footage and cut it on a timeline.
+## What people do with it
 
-## What it's for
+Drop your raw footage and files into a folder, then ask for the video you want. That's it.
 
-- **Video editing**: raw footage into a finished cut
+The agent handles everything from there:
+
+- Cuts the clips
+- Removes filler words
+- Adds subtitles
+- Applies color correction and filters
+- Handles animations
+- Renders the final video
+
+Beyond finishing a cut, it covers:
+
 - **Motion graphics**: explainers, promos, and title sequences
 - **Generative assets**: images, video, and voiceover, declared in code and composited into the timeline
 - **Clipping**: highlights from a long video, reformatted for social
 - **Video understanding**: summaries, scene search, quotes with timestamps
 
+## How it works
+
+Diffusion Studio uses [SolidJS](https://www.solidjs.com) modules as the document source. Think IDE, but it renders a video canvas instead of text.
+
+Editing works both ways: change something on the canvas and the code updates; change the code and the canvas redraws.
+
+The desktop app includes command-line tools that let agents watch and listen to footage, edit it on a timeline, and render the result.
+
 ## Getting started
 
-Use with Claude Code, Codex, Cursor, Copilot, or Gemini CLI. Install the skill once, globally:
+Download the desktop app, it walks you through setting everything up:
 
-```sh
-npx skills add diffusionstudio/skills
-```
+<a href="https://www.diffusion.studio/download"><img src="https://img.shields.io/badge/Download-Diffusion%20Studio-161616?style=for-the-badge&logo=apple&logoColor=F8F8F8&labelColor=000000" alt="Download Diffusion Studio" /></a>
 
-`/editor` is the main skill you'll use. Ask for what you want in plain language. Behind it is `dapi`, the CLI that drives the app.
+Use with Claude Code, Codex, Cursor, Copilot, or Gemini CLI. `/editor` is the main skill you'll use. Ask for what you want in plain language. Behind it is `dapi`, the CLI that drives the app.
 
 ## Prompt examples
 

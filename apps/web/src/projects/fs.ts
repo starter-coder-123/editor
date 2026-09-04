@@ -42,6 +42,85 @@ export function createProjectFS(dir: string): ProjectFS {
 	const absolute = (source: string): string =>
 		isAbsoluteSource(source) ? source : `${dir}${separator}${source.split('/').join(separator)}`;
 
+	if (!window.desktop) {
+		const segments = dir.replace(/\\/g, '/').split('/');
+		const id = segments[segments.length - 1] || dir;
+		const API_BASE = "";
+
+		return {
+			absolute,
+			readManifest: async () => {
+				try {
+					const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(id)}/manifest`);
+					if (!res.ok) return { name: dir, assets: [] };
+					return await res.json();
+				} catch {
+					return { name: dir, assets: [] };
+				}
+			},
+			writeManifest: async (manifest: Manifest) => {
+				try {
+					await fetch(`${API_BASE}/api/projects/${encodeURIComponent(id)}/manifest`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify(manifest),
+					});
+				} catch {
+					// optional
+				}
+			},
+			list: async (source: string) => {
+				try {
+					const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(id)}/fs/list?source=${encodeURIComponent(source)}`);
+					if (!res.ok) return [];
+					return await res.json();
+				} catch {
+					return [];
+				}
+			},
+			stat: async (source: string) => {
+				try {
+					const res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(id)}/fs/stat?source=${encodeURIComponent(source)}`);
+					if (!res.ok) return null;
+					return await res.json();
+				} catch {
+					return null;
+				}
+			},
+			file: async (source: string) => {
+				const clean = source.replace(/^[/\\]+/, '');
+				// Use /fs/file endpoint with application/octet-stream and X-Requested-With to prevent IDM / download managers from intercepting
+				let res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(id)}/fs/file?source=${encodeURIComponent(clean)}`, {
+					headers: {
+						'X-Requested-With': 'XMLHttpRequest',
+						'Accept': 'application/octet-stream',
+					},
+				});
+				if (!res.ok) {
+					res = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(id)}/assets/${clean}`, {
+						headers: { 'X-Requested-With': 'XMLHttpRequest' },
+					});
+				}
+				if (!res.ok) throw new Error(`Could not fetch asset: ${source}`);
+				const blob = await res.blob();
+				const filename = clean.split('/').pop() || 'asset';
+				let mime = blob.type;
+				if (!mime || mime === 'application/octet-stream') {
+					if (filename.endsWith('.png')) mime = 'image/png';
+					else if (filename.endsWith('.jpg') || filename.endsWith('.jpeg')) mime = 'image/jpeg';
+					else if (filename.endsWith('.wav')) mime = 'audio/wav';
+					else if (filename.endsWith('.mp3')) mime = 'audio/mpeg';
+					else if (filename.endsWith('.mp4')) mime = 'video/mp4';
+				}
+				return new File([blob], filename, { type: mime });
+			},
+			write: () => Promise.resolve(),
+			remove: () => Promise.resolve(),
+			realPath: () => Promise.resolve(null),
+			pathOf: () => null,
+		};
+	}
+
 	return {
 		absolute,
 		readManifest: () => mainBridge.call(MAIN_CHANNELS.PROJECTS_MANIFEST_READ, { dir }),

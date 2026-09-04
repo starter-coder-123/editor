@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Router, HashRouter, Route, useLocation, useNavigate } from '@solidjs/router';
+import { Router, HashRouter, Route, useLocation } from '@solidjs/router';
 import { ColorModeProvider } from '@kobalte/core';
 import { Show, createEffect, type JSX } from 'solid-js';
 import { Toaster } from "@/components/ui/sonner";
@@ -29,7 +29,7 @@ function AuthGate(props: { children: JSX.Element }) {
       <Show when={auth.isAuthenticated() || auth.headless()}>
         {props.children}
       </Show>
-      <Show when={!auth.isAuthenticated() && !auth.headless()}>
+      <Show when={!auth.isAuthenticated()}>
         <LoginPage />
       </Show>
     </Show>
@@ -44,25 +44,6 @@ function BootSplash() {
     document.getElementById('boot-splash')?.remove();
   });
 
-  return null;
-}
-
-function ProjectQueryRedirect() {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  createEffect(() => {
-    try {
-      const search = window.location.search || location.search;
-      const params = new URLSearchParams(search);
-      const proj = params.get("project") || params.get("projectId");
-      if (proj) {
-        navigate(`/projects/${encodeURIComponent(proj)}`, { replace: true });
-      }
-    } catch {
-      // ignore
-    }
-  });
   return null;
 }
 
@@ -87,7 +68,6 @@ function App() {
           <AppContextMenu>
             <AuthProvider>
               {props.children}
-              <ProjectQueryRedirect />
               <BootSplash />
               <UpgradeDialog />
               <PurchaseSuccess />
@@ -102,7 +82,6 @@ function App() {
     >
       <Route path="/auth/callback" component={AuthCallbackPage} />
       <Route path="/" component={() => <AuthGate><DashboardPage /></AuthGate>} />
-      <Route path="/dashboard" component={() => <AuthGate><DashboardPage /></AuthGate>} />
       <Route path="/projects/*ref" component={() => <AuthGate><ProjectPage /></AuthGate>} />
       <Route path="*404" component={NotFoundPage} />
     </RouterComponent>

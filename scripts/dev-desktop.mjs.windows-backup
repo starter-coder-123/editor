@@ -27,16 +27,7 @@ function run(name, bin, args, cwd) {
   // SIGTERM isn't dressed up as a "Lifecycle script failed" error by an npm
   // wrapper. Own process group (detached) so we can signal the tool *and* its
   // children (esbuild, electron) in one shot on teardown.
-  const executable = process.platform === "win32"
-    ? join(BIN, `${bin}.cmd`)
-    : join(BIN, bin);
-
-  const child = spawn(executable, args, {
-    cwd,
-    stdio: "inherit",
-    detached: true,
-    shell: true,
-  });
+  const child = spawn(join(BIN, bin), args, { cwd, stdio: "inherit", detached: true });
   child.on("exit", (code) => {
     if (shuttingDown) return;
     // A child dying on its own (e.g. Vite crashed) should bring the rest down.
@@ -163,7 +154,5 @@ console.log("[dev:desktop] building desktop appâ€¦");
 execFileSync(process.platform === "win32" ? "npm.cmd" : "npm", ["run", "build", "--workspace=@diffusionstudio/desktop"], { stdio: "inherit", shell: true });
 console.log("[dev:desktop] starting desktop appâ€¦");
 run("desktop", "electron-forge", ["start"], join(ROOT, "apps", "desktop"));
-
-
 
 

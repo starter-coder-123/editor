@@ -75,8 +75,40 @@ export function FileMenu() {
     await pickAndImport(lib, "");
   };
 
+  const handleRenderRemotion = async () => {
+    const id = project.id();
+    if (!id) {
+      toast.error("No active project");
+      return;
+    }
+    toast("Starting Remotion render...", { description: `Project: ${id}` });
+    try {
+      const res = await fetch(`http://127.0.0.1:3030/api/projects/${encodeURIComponent(id)}/render`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Render failed");
+      }
+      toast.success("Render completed!", {
+        description: `Video saved: ${data.output}`,
+      });
+    } catch (err) {
+      toast.error("Render failed", { description: (err as Error).message });
+    }
+  };
+
   return (
     <>
+      <DropdownMenuGroup>
+        <DropdownMenuItem onSelect={handleRenderRemotion}>
+          Render with Remotion
+          <DropdownMenuShortcut>⌘R</DropdownMenuShortcut>
+        </DropdownMenuItem>
+      </DropdownMenuGroup>
+
+      <DropdownMenuSeparator />
+
       <DropdownMenuGroup>
         <DropdownMenuItem onSelect={handleNewProject}>
           New project

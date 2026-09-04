@@ -90,10 +90,33 @@ export function ProjectHeader(props: ProjectHeaderProps) {
     }
   };
 
+  const handleRenderRemotion = async () => {
+    const id = project.id();
+    if (!id) {
+      toast.error("No active project");
+      return;
+    }
+    toast("Starting Remotion render...", { description: `Project: ${id}` });
+    try {
+      const res = await fetch(`http://127.0.0.1:3030/api/projects/${encodeURIComponent(id)}/render`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Render failed");
+      }
+      toast.success("Render completed!", {
+        description: `Video saved: ${data.output}`,
+      });
+    } catch (err) {
+      toast.error("Render failed", { description: (err as Error).message });
+    }
+  };
+
   return (
-    <div class={cx("h-12 shrink-0 flex items-center gap-1 pr-4 pl-2.5", props.class)}>
+    <div class={cx("h-12 shrink-0 flex items-center gap-2 pr-4 pl-2.5", props.class)}>
       <ProjectMenu />
-      <div class="flex items-center w-full">
+      <div class="flex items-center flex-1 min-w-0">
         <input
           type="text"
           value={projectNameDraft() ?? project.name()}
@@ -102,9 +125,17 @@ export function ProjectHeader(props: ProjectHeaderProps) {
           onBlur={handleBlurNameInput}
           onKeyDown={handleKeyDownNameInput}
           placeholder="Project name"
-          class="w-full bg-transparent focus-ring px-1 h-5 ml-1 rounded text-xs text-muted-foreground font-450 outline-none"
+          class="w-full bg-transparent focus-ring px-1 h-5 rounded text-xs text-muted-foreground font-450 outline-none truncate"
         />
       </div>
+      <Button
+        variant="default"
+        size="xs"
+        class="shrink-0 text-xs px-2.5 py-1 font-medium whitespace-nowrap"
+        onClick={handleRenderRemotion}
+      >
+        Render with Remotion
+      </Button>
     </div>
   )
 }
@@ -112,12 +143,37 @@ export function ProjectHeader(props: ProjectHeaderProps) {
 export function FloatingProjectHeader() {
   const { isDesktop } = useEditorApi();
   const { toggleUI } = useLayout();
+  const project = useProject();
+
+  const handleRenderRemotion = async () => {
+    const id = project.id();
+    if (!id) return;
+    toast("Starting Remotion render...", { description: `Project: ${id}` });
+    try {
+      const res = await fetch(`http://127.0.0.1:3030/api/projects/${encodeURIComponent(id)}/render`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || "Render failed");
+      toast.success("Render completed!", { description: `Video: ${data.output}` });
+    } catch (err) {
+      toast.error("Render failed", { description: (err as Error).message });
+    }
+  };
 
   return (
-    <div data-desktop={isDesktop} class="h-10 rounded-lg border border-border shrink-0 flex items-center px-2 gap-1 fixed top-4 data-[desktop=true]:top-10 left-4 z-30 bg-background shadow-lg">
+    <div data-desktop={isDesktop} class="h-10 rounded-lg border border-border shrink-0 flex items-center px-2 gap-2 fixed top-4 data-[desktop=true]:top-10 left-4 z-30 bg-background shadow-lg">
       <ProjectMenu />
       <span class="text-xs text-muted-foreground font-450">Diffusion Studio</span>
-      <Button variant="ghost" size="icon" class="text-muted-foreground ml-2" onClick={toggleUI}>
+      <Button
+        variant="secondary"
+        size="xs"
+        class="text-xs px-2 py-0.5"
+        onClick={handleRenderRemotion}
+      >
+        Render with Remotion
+      </Button>
+      <Button variant="ghost" size="icon" class="text-muted-foreground ml-1" onClick={toggleUI}>
         <Icon name="sidebar" />
       </Button>
     </div>

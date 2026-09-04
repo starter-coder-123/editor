@@ -29,8 +29,9 @@ const DASHBOARD_VIEWS: readonly DashboardView[] = [
   "help",
 ];
 
-function parseView(value: string | string[] | undefined): DashboardView {
-  const raw = Array.isArray(value) ? value[0] : value;
+function parseView(params: Record<string, any>): DashboardView {
+  if (params.projects !== undefined) return "projects";
+  const raw = Array.isArray(params.dashboard) ? params.dashboard[0] : params.dashboard;
   return DASHBOARD_VIEWS.find((v) => v === raw) ?? "projects";
 }
 
@@ -38,7 +39,7 @@ export function DashboardPage() {
   const [params, setParams] = useSearchParams();
   const isFullscreen = useFullscreenState();
 
-  const view = (): DashboardView => parseView(params.dashboard);
+  const view = (): DashboardView => parseView(params);
   const setView = (next: DashboardView) => setParams({ dashboard: next }, { replace: true });
 
   return (

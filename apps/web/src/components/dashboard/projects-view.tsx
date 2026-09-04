@@ -53,7 +53,6 @@ import {
   listProjects,
   projectKey,
   projectCoverKey,
-  projectsRoot,
   readProjectCover,
   renameProject,
   type ProjectInfo,
@@ -65,7 +64,7 @@ export function DashboardProjectsView() {
   const navigate = useNavigate();
   const [search, setSearch] = createSignal("");
   const [sort, setSort] = createSignal<ProjectSortOption>("last-viewed");
-  const [projects, { refetch: refetchProjects }] = createResource(projectsRoot, () => listProjects());
+  const [projects, { refetch: refetchProjects }] = createResource(() => listProjects());
   const [selectedProject, setSelectedProject] = createSignal<string | null>(null);
   const [creating, setCreating] = createSignal(false);
   const [pendingDelete, setPendingDelete] = createSignal<ProjectInfo | null>(null);
@@ -218,13 +217,9 @@ export function DashboardProjectsView() {
     setCreating(true);
 
     try {
-      if (!isDesktop()) {
-        toast.error("Projects on disk are only available in the desktop app");
-        return;
+      if (isDesktop()) {
+        if (!(await ensureProjectsRoot())) return;
       }
-      // Waits for the roots to come back from the database, and asks for one
-      // when there is none to wait for.
-      if (!(await ensureProjectsRoot())) return;
 
       const project = await createProject(generateProjectName());
       track('project_created');

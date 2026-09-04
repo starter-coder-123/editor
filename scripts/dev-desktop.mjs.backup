@@ -1,4 +1,4 @@
-﻿/* This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -27,16 +27,7 @@ function run(name, bin, args, cwd) {
   // SIGTERM isn't dressed up as a "Lifecycle script failed" error by an npm
   // wrapper. Own process group (detached) so we can signal the tool *and* its
   // children (esbuild, electron) in one shot on teardown.
-  const executable = process.platform === "win32"
-    ? join(BIN, `${bin}.cmd`)
-    : join(BIN, bin);
-
-  const child = spawn(executable, args, {
-    cwd,
-    stdio: "inherit",
-    detached: true,
-    shell: true,
-  });
+  const child = spawn(join(BIN, bin), args, { cwd, stdio: "inherit", detached: true });
   child.on("exit", (code) => {
     if (shuttingDown) return;
     // A child dying on its own (e.g. Vite crashed) should bring the rest down.
@@ -122,7 +113,7 @@ async function reclaimPort(port) {
       console.error(`[dev:desktop] port ${port} is in use by another process (pid ${pid}): ${command || "unknown"}`);
       process.exit(1);
     }
-    console.log(`[dev:desktop] port ${port} held by a stale vite (pid ${pid}); stopping itâ€¦`);
+    console.log(`[dev:desktop] port ${port} held by a stale vite (pid ${pid}); stopping it…`);
     try {
       process.kill(pid, "SIGTERM");
     } catch {
@@ -143,12 +134,12 @@ async function reclaimPort(port) {
 }
 
 // 1. Build the CLI (blocking) so `dapi` and the app agree on the latest code.
-console.log("[dev:desktop] building CLIâ€¦");
-execFileSync(process.platform === "win32" ? "npm.cmd" : "npm", ["run", "build", "--workspace=@diffusionstudio/cli"], { stdio: "inherit", shell: true });
+console.log("[dev:desktop] building CLI…");
+execFileSync("npm", ["run", "build", "--workspace=@diffusionstudio/cli"], { stdio: "inherit" });
 
 // 2. Start the web dev server, on a port that is free.
 await reclaimPort(DEV_PORT);
-console.log("[dev:desktop] starting web dev serverâ€¦");
+console.log("[dev:desktop] starting web dev server…");
 run("web", "vite", [], join(ROOT, "apps", "web"));
 
 // 3. Once it is up, build the desktop app (blocking, mirrors its `dev`
@@ -159,11 +150,7 @@ try {
   console.error(`[dev:desktop] ${err.message}`);
   shutdown(1);
 }
-console.log("[dev:desktop] building desktop appâ€¦");
-execFileSync(process.platform === "win32" ? "npm.cmd" : "npm", ["run", "build", "--workspace=@diffusionstudio/desktop"], { stdio: "inherit", shell: true });
-console.log("[dev:desktop] starting desktop appâ€¦");
+console.log("[dev:desktop] building desktop app…");
+execFileSync("npm", ["run", "build", "--workspace=@diffusionstudio/desktop"], { stdio: "inherit" });
+console.log("[dev:desktop] starting desktop app…");
 run("desktop", "electron-forge", ["start"], join(ROOT, "apps", "desktop"));
-
-
-
-

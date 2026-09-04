@@ -18,10 +18,14 @@ import { isDesktop, pickProjectsRoot, projectsRoot, rootsReady } from "@/project
 export function DashboardProjectsFolderBar() {
   // Blank rather than "No folder selected" until the database has answered:
   // the root arrives a tick after the bar first renders.
-  const rootLabel = () => (rootsReady() ? projectsRoot() ?? "No folder selected" : "");
-  const hasRoot = () => !!projectsRoot();
+  const rootLabel = () => {
+    if (isDesktop()) return rootsReady() ? projectsRoot() ?? "No folder selected" : "";
+    return "E:\\Probrou-Marketing\\projects (Project Service API :3030)";
+  };
+  const hasRoot = () => true;
 
   const handleChange = async () => {
+    if (!isDesktop()) return;
     try {
       await pickProjectsRoot();
     } catch (e) {
@@ -30,6 +34,7 @@ export function DashboardProjectsFolderBar() {
   };
 
   const handleReveal = async () => {
+    if (!isDesktop()) return;
     const root = projectsRoot();
     if (!root) return;
 
@@ -41,24 +46,24 @@ export function DashboardProjectsFolderBar() {
   };
 
   return (
-    <Show when={isDesktop()}>
-      <div class="flex shrink-0 flex-col gap-3 border-t border-border px-4 py-3">
-        <div class="flex items-center gap-4">
-          <div class="flex min-w-0 flex-1 items-start gap-2">
-            <span class="relative size-4 shrink-0 text-muted-foreground">
-              <Icon
-                name="navigation.folder"
-                class="absolute left-1/2 top-1/2 size-6 -translate-x-1/2 -translate-y-1/2"
-              />
-            </span>
-            <div class="flex min-w-0 flex-1 flex-col justify-center gap-1">
-              <p class="h-4 text-xs text-foreground">Project folder</p>
-              <p class="min-w-0 truncate text-xs text-muted-foreground">
-                {rootLabel()}
-              </p>
-            </div>
+    <div class="flex shrink-0 flex-col gap-3 border-t border-border px-4 py-3">
+      <div class="flex items-center gap-4">
+        <div class="flex min-w-0 flex-1 items-start gap-2">
+          <span class="relative size-4 shrink-0 text-muted-foreground">
+            <Icon
+              name="navigation.folder"
+              class="absolute left-1/2 top-1/2 size-6 -translate-x-1/2 -translate-y-1/2"
+            />
+          </span>
+          <div class="flex min-w-0 flex-1 flex-col justify-center gap-1">
+            <p class="h-4 text-xs text-foreground">Project folder</p>
+            <p class="min-w-0 truncate text-xs text-muted-foreground">
+              {rootLabel()}
+            </p>
           </div>
-          <div class="flex shrink-0 items-center gap-2">
+        </div>
+        <div class="flex shrink-0 items-center gap-2">
+          <Show when={isDesktop()}>
             <Show when={hasRoot()}>
               <Button variant="ghost" class="text-muted-foreground" onClick={handleReveal}>
                 Reveal in finder
@@ -67,9 +72,9 @@ export function DashboardProjectsFolderBar() {
             <Button variant="secondary" onClick={handleChange}>
               {hasRoot() ? "Change..." : "Choose folder..."}
             </Button>
-          </div>
+          </Show>
         </div>
       </div>
-    </Show>
+    </div>
   );
 }

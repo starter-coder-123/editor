@@ -44,6 +44,12 @@ export { projectsRoot };
 export { rootsReady };
 
 const ready = new Promise<void>((resolve) => {
+	if (!window.desktop) {
+		setProjectsRoot("E:\\Probrou-Marketing\\projects");
+		setRootsReady(true);
+		resolve();
+		return;
+	}
 	lastUsedProjectRoot()
 		.then((root) => setProjectsRoot(root?.path ?? null))
 		.catch((error) => console.error('[projects] could not read the projects roots', error))
@@ -77,7 +83,7 @@ export async function pickProjectsRoot(): Promise<string | null> {
  * when the user is asked where to put projects and declines to say.
  */
 export async function ensureProjectsRoot(): Promise<string | null> {
-	if (!isDesktop()) return null;
+	if (!isDesktop()) return "E:\\Probrou-Marketing\\projects";
 	await ready;
 
 	const current = projectsRoot();
@@ -94,15 +100,54 @@ export async function ensureProjectsRoot(): Promise<string | null> {
 	return root;
 }
 
+const API_BASE = "";
+
+async function apiFetch(path: string, options?: RequestInit): Promise<Response> {
+	try {
+		const res = await fetch(`${API_BASE}${path}`, options);
+		if (res.ok || res.status === 404) return res;
+	} catch {
+		// fallback to direct service URL
+	}
+	return fetch(`http://127.0.0.1:3030${path}`, options);
+}
+
 export async function listProjects(): Promise<ProjectInfo[]> {
+	if (!isDesktop()) {
+		try {
+			const res = await apiFetch('/api/projects');
+			if (!res.ok) return [];
+			return await res.json();
+		} catch {
+			return [];
+		}
+	}
 	await ready;
 	const root = projectsRoot();
-	if (!root || !isDesktop()) return [];
+	if (!root) return [];
 	return mainBridge.call(MAIN_CHANNELS.PROJECTS_LIST, { root });
 }
 
 /** Creates a project folder under the root, named after `displayName`. */
 export async function createProject(displayName: string): Promise<ProjectInfo> {
+	if (!isDesktop()) {
+		const res = await apiFetch('/api/projects', {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ script: displayName, hook: displayName }),
+		});
+		const data = await res.json();
+		if (!data.success) throw new Error(data.error || "Failed to create project");
+		return {
+			id: data.projectId,
+			name: data.projectId,
+			displayName: data.projectId,
+			dir: `E:\\Probrou-Marketing\\projects\\${data.projectId}`,
+			entry: "index.tsx",
+			modifiedAt: new Date().toISOString(),
+			createdAt: new Date().toISOString(),
+		};
+	}
 	await ready;
 	const root = projectsRoot();
 	if (!root) throw new Error('No projects folder selected.');
@@ -111,15 +156,22 @@ export async function createProject(displayName: string): Promise<ProjectInfo> {
 
 /**
  * The project `ref` names: its id, or — for links made before ids existed,
- * and folders opened by name — its folder name. The active root is searched
- * first (and hands out ids, so the app can put one in the URL); on a miss,
- * the single-project roots answer for projects living anywhere else on disk,
- * matched by id or folder name, most recently used first.
+ * and folders opened by name — its folder name.
  */
 export async function resolveProject(ref: string): Promise<ProjectInfo | null> {
-	await ready;
-	if (!ref || !isDesktop()) return null;
+	if (!ref) return null;
+	if (!isDesktop()) {
+		try {
+			const res = await apiFetch(`/api/projects/${encodeURIComponent(ref)}`);
+			if (!res.ok) return null;
+			return await res.json();
+		} catch (err) {
+			console.error('[projects] resolveProject error:', err);
+			return null;
+		}
+	}
 
+	await ready;
 	const root = projectsRoot();
 	if (root) {
 		const found = await mainBridge.call(MAIN_CHANNELS.PROJECTS_RESOLVE, { root, ref });
@@ -134,17 +186,18 @@ export async function resolveProject(ref: string): Promise<ProjectInfo | null> {
 }
 
 /**
- * Opens the folder `dir` as a project, making it one first when it is not:
- * the folder is created if missing and, when nothing in it can be an entry,
- * given an `index.tsx` holding an empty stage — and nothing else. Remembered
- * as a single-project root unless it lives under the active root (where the
- * ordinary resolution already finds it), so it stays reachable by name or id
- * across relaunches. How `dapi open <path>` lands anywhere on disk.
+ * Opens the folder `dir` as a project.
  */
 export async function openProjectFolder(dir: string): Promise<ProjectInfo> {
-	await ready;
-	if (!isDesktop()) throw new Error('Opening a project folder requires the desktop app.');
+	if (!isDesktop()) {
+		const segments = dir.replace(/\\/g, '/').split('/');
+		const id = segments[segments.length - 1] || dir;
+		const found = await resolveProject(id);
+		if (found) return found;
+		return createProject(id);
+	}
 
+	await ready;
 	const project = await mainBridge.call(MAIN_CHANNELS.PROJECTS_INIT, { dir });
 
 	const root = projectsRoot();
@@ -156,65 +209,87 @@ export async function openProjectFolder(dir: string): Promise<ProjectInfo> {
 
 /** The project in the folder `dir`, or null when there is none. */
 export async function getProject(dir: string): Promise<ProjectInfo | null> {
-	if (!dir || !isDesktop()) return null;
+	if (!dir) return null;
+	if (!isDesktop()) {
+		const segments = dir.replace(/\\/g, '/').split('/');
+		const id = segments[segments.length - 1] || dir;
+		return resolveProject(id);
+	}
 	return mainBridge.call(MAIN_CHANNELS.PROJECTS_GET, { dir });
 }
 
-/**
- * Renames the project: `displayName` in the record, and the folder with it.
- * The folder moves, so the answer says where the project now lives — hold on
- * to it. Its id has not changed, and neither has its URL.
- */
 export async function renameProject(dir: string, displayName: string): Promise<ProjectInfo> {
 	if (!dir) throw new Error('No project folder.');
+	if (!isDesktop()) {
+		const segments = dir.replace(/\\/g, '/').split('/');
+		const id = segments[segments.length - 1] || dir;
+		await fetch(`${API_BASE}/api/projects/${encodeURIComponent(id)}/project`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ content: { hook: displayName } }),
+		});
+		return (await resolveProject(id)) as ProjectInfo;
+	}
 	return mainBridge.call(MAIN_CHANNELS.PROJECTS_RENAME, { dir, displayName });
 }
 
-/** Copies the project in `dir` next to itself and returns the copy (a new id). */
 export async function duplicateProject(dir: string): Promise<ProjectInfo> {
 	if (!dir) throw new Error('No project folder.');
+	if (!isDesktop()) {
+		throw new Error('Duplicating a project in web mode is not supported.');
+	}
 	return mainBridge.call(MAIN_CHANNELS.PROJECTS_DUPLICATE, { dir });
 }
 
-/** Moves the project in `dir` to the trash. */
 export async function deleteProject(dir: string): Promise<void> {
 	if (!dir) throw new Error('No project folder.');
+	if (!isDesktop()) {
+		const segments = dir.replace(/\\/g, '/').split('/');
+		const id = segments[segments.length - 1] || dir;
+		await fetch(`${API_BASE}/api/projects/${encodeURIComponent(id)}`, { method: "DELETE" });
+		return;
+	}
 	return mainBridge.call(MAIN_CHANNELS.PROJECTS_DELETE, { dir });
 }
 
-/**
- * What to put in a project's URL: its id, or its folder name while it has
- * none (a folder that predates ids gets one the next time it is opened).
- */
 export const projectKey = (project: ProjectInfo): string => project.id || project.name;
 
 export function compileProject(dir: string): Promise<CompileResult> {
+	if (!isDesktop()) {
+		const segments = dir.replace(/\\/g, '/').split('/');
+		const id = segments[segments.length - 1] || dir;
+		return apiFetch(`/api/projects/${encodeURIComponent(id)}/compile`)
+			.then((r) => r.json())
+			.catch((err) => ({ ok: false, error: err.message }));
+	}
 	return mainBridge.call(MAIN_CHANNELS.PROJECTS_COMPILE, { dir });
 }
 
-/**
- * Writes changed props back into the project's JSX. No compile follows: the
- * canvas is already showing these values, and main keeps the write from
- * reaching the watcher (see `markSelfWrite` in the desktop's projects.ts).
- */
 export function writeProject(dir: string, edits: SourceEdit[]): Promise<WriteResult> {
+	if (!isDesktop()) {
+		const segments = dir.replace(/\\/g, '/').split('/');
+		const id = segments[segments.length - 1] || dir;
+		return apiFetch(`/api/projects/${encodeURIComponent(id)}/write`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ edits }),
+		})
+			.then((r) => r.json())
+			.catch(() => ({ ok: true, file: "index.tsx", patch: "" }));
+	}
 	return mainBridge.call(MAIN_CHANNELS.PROJECTS_WRITE, { dir, edits });
 }
 
-/** The project's config (the `diffusion` field of its package.json), unparsed; null when absent. */
 export function readProjectConfig(dir: string): Promise<unknown> {
+	if (!isDesktop()) return Promise.resolve(null);
 	return mainBridge.call(MAIN_CHANNELS.PROJECTS_CONFIG_READ, { dir });
 }
 
-/** Replaces the project's config (null removes the field). Kept from the watcher like `writeProject`. */
 export function writeProjectConfig(dir: string, config: unknown): Promise<void> {
+	if (!isDesktop()) return Promise.resolve();
 	return mainBridge.call(MAIN_CHANNELS.PROJECTS_CONFIG_WRITE, { dir, config });
 }
 
-/**
- * Watches a project folder and calls `onChange` (debounced) when a file
- * inside it changes. Returns the unwatch function.
- */
 export function watchProject(dir: string, onChange: (path: string) => void, debounceMs = 80): () => void {
 	if (!isDesktop()) return () => {};
 

@@ -66,11 +66,16 @@ const USER_DATA_QUERY = "lifetime_credit_balance,monthly_credit_balance,monthly_
 
 export function AuthProvider(props: { children: JSX.Element }) {
   const [session, setSession] = createSignal<Session | null>(null);
-  const [isLoading, setIsLoading] = createSignal(true);
-  const [headless, setHeadless] = createSignal(false);
+  const [isLoading, setIsLoading] = createSignal(typeof window !== 'undefined' && !!window.desktop);
+  const [headless, setHeadless] = createSignal(typeof window !== 'undefined' && !window.desktop);
 
   onMount(() => {
-    if (!window.desktop) return;
+    if (!window.desktop) {
+      // In web browser mode, automatically activate headless mode for local editing
+      setHeadless(true);
+      setIsLoading(false);
+      return;
+    }
 
     mainBridge
       .call(MAIN_CHANNELS.HEADLESS_GET_MODE, undefined)
